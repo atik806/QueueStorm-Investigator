@@ -1,17 +1,16 @@
-const serverless = require('serverless-http');
 const { NestFactory } = require('@nestjs/core');
 const {
   ValidationPipe, BadRequestException, UnprocessableEntityException,
 } = require('@nestjs/common');
 const helmet = require('helmet');
-const { AppModule } = require('../dist/app.module');
-const { AllExceptionsFilter } = require('../dist/common/filters/all-exceptions.filter');
-const { LoggingInterceptor } = require('../dist/common/interceptors/logging.interceptor');
+const { AppModule } = require('./dist/app.module');
+const { AllExceptionsFilter } = require('./dist/common/filters/all-exceptions.filter');
+const { LoggingInterceptor } = require('./dist/common/interceptors/logging.interceptor');
 
-let handler;
+let expressApp;
 
-async function bootstrap() {
-  if (handler) return handler;
+async function getApp() {
+  if (expressApp) return expressApp;
 
   const app = await NestFactory.create(AppModule);
 
@@ -41,17 +40,19 @@ async function bootstrap() {
 
   await app.init();
 
-  const expressApp = app.getHttpAdapter().getInstance();
-  handler = serverless(expressApp);
-
-  return handler;
+  expressApp = app.getHttpAdapter().getInstance();
+  return expressApp;
 }
 
-module.exports = async function (req, res) {
+module.exports = async function handler(req, res) {
   try {
-    const fn = await bootstrap();
-    return fn(req, res);
+    const app = await getApp();
+    app(req, res);
   } catch (err) {
-    res.status(500).json({ error: err.message, stack: err.stack, name: err.name });
+    console.error('VERCEL_ERROR:', err);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.end(JSON.stringify({ error: err.message }));
+    }
   }
 };

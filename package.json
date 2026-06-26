@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "vercel-build": "nest build && mkdir -p api/dist && cp -r dist/* api/dist/",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -30,8 +31,7 @@
     "helmet": "^8.2.0",
     "openai": "^6.45.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
-    "serverless-http": "^4.0.0"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
