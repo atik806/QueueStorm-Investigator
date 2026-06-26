@@ -9,8 +9,13 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import type { Request, Response } from 'express';
 
-async function bootstrap() {
+let cachedApp;
+
+async function createApp() {
+  if (cachedApp) return cachedApp;
+
   const app = await NestFactory.create(AppModule);
 
   app.use(helmet());
@@ -21,9 +26,6 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: false,
-      // forbidNonWhitelisted is false because the judge harness may send
-      // extra fields (metadata, future optional fields) we should tolerate
-      // rather than reject with 400.
       transform: true,
       transformOptions: { enableImplicitConversion: true },
       exceptionFactory: (errors) => {
@@ -63,18 +65,32 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-  const logger = new Logger('Bootstrap');
-  const port = process.env.PORT || 3000;
-
-  process.on('unhandledRejection', (reason) => {
-    logger.error(`Unhandled Rejection: ${reason}`);
-  });
-
-  process.on('uncaughtException', (error) => {
-    logger.error(`Uncaught Exception: ${error.message}`);
-  });
-
-  await app.listen(port);
-  logger.log(`Server running on port ${port}`);
+  cachedApp = app;
+  return app;
 }
-bootstrap();
+
+if (!process.env.VERCEL) {
+  async function bootstrap() {
+    const app = await createApp();
+    const logger = new Logger('Bootstrap');
+    const port = process.env.PORT || 3000;
+
+    process.on('unhandledRejection', (reason) => {
+      logger.error(`Unhandled Rejection: ${reason}`);
+    });
+
+    process.on('uncaughtException', (error) => {
+      logger.error(`Uncaught Exception: ${error.message}`);
+    });
+
+    await app.listen(port);
+    logger.log(`Server running on port ${port}`);
+  }
+  bootstrap();
+}
+
+export default async function handler(req: Request, res: Response) {
+  const app = await createApp();
+  const expressInstance = app.getHttpAdapter().getInstance();
+  return expressInstance(req, res);
+}
