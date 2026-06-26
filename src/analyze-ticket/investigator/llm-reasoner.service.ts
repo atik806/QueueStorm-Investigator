@@ -101,7 +101,7 @@ Return valid JSON only: { "agent_summary": "...", "recommended_next_action": "..
 
     try {
       if (this.provider === 'openai' && this.apiKey) {
-        const { default: OpenAI } = await import('openai');
+        const { OpenAI } = await import('openai');
         const client = new OpenAI({
           apiKey: this.apiKey,
           baseURL: this.configService.get<string>('OPENAI_BASE_URL'),
@@ -126,7 +126,7 @@ Return valid JSON only: { "agent_summary": "...", "recommended_next_action": "..
       }
 
       if (this.provider === 'anthropic' && this.apiKey) {
-        const { default: Anthropic } = await import('@anthropic-ai/sdk');
+        const { Anthropic } = await import('@anthropic-ai/sdk');
         const client = new Anthropic({
           apiKey: this.apiKey,
         });
